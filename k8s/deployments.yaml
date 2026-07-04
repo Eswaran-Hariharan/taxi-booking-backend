@@ -1,0 +1,458 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: uber
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: uber/api-gateway:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: REDIS_HOST
+              value: redis-service
+            - name: KAFKA_SERVERS
+              value: kafka-service:9092
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: uber-secrets
+                  key: jwt-secret
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway-service
+  namespace: uber
+spec:
+  selector:
+    app: api-gateway
+  ports:
+    - port: 80
+      targetPort: 8080
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: driver-service
+  namespace: uber
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: driver-service
+  template:
+    metadata:
+      labels:
+        app: driver-service
+    spec:
+      containers:
+        - name: driver-service
+          image: uber/driver-service:latest
+          ports:
+            - containerPort: 8081
+          env:
+            - name: DB_HOST
+              value: postgres-service
+            - name: REDIS_HOST
+              value: redis-service
+            - name: KAFKA_SERVERS
+              value: kafka-service:9092
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 40
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 80
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: driver-service
+  namespace: uber
+spec:
+  selector:
+    app: driver-service
+  ports:
+    - port: 8081
+      targetPort: 8081
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: location-service
+  namespace: uber
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: location-service
+  template:
+    metadata:
+      labels:
+        app: location-service
+    spec:
+      containers:
+        - name: location-service
+          image: uber/location-service:latest
+          ports:
+            - containerPort: 8086
+          env:
+            - name: REDIS_HOST
+              value: redis-service
+            - name: KAFKA_SERVERS
+              value: kafka-service:9092
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1500m"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8086
+            initialDelaySeconds: 30
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: location-service
+  namespace: uber
+spec:
+  selector:
+    app: location-service
+  ports:
+    - port: 8086
+      targetPort: 8086
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: matching-service
+  namespace: uber
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: matching-service
+  template:
+    metadata:
+      labels:
+        app: matching-service
+    spec:
+      containers:
+        - name: matching-service
+          image: uber/matching-service:latest
+          ports:
+            - containerPort: 8087
+          env:
+            - name: REDIS_HOST
+              value: redis-service
+            - name: KAFKA_SERVERS
+              value: kafka-service:9092
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: matching-service
+  namespace: uber
+spec:
+  selector:
+    app: matching-service
+  ports:
+    - port: 8087
+      targetPort: 8087
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trip-service
+  namespace: uber
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: trip-service
+  template:
+    metadata:
+      labels:
+        app: trip-service
+    spec:
+      containers:
+        - name: trip-service
+          image: uber/trip-service:latest
+          ports:
+            - containerPort: 8083
+          env:
+            - name: DB_HOST
+              value: postgres-service
+            - name: REDIS_HOST
+              value: redis-service
+            - name: KAFKA_SERVERS
+              value: kafka-service:9092
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trip-service
+  namespace: uber
+spec:
+  selector:
+    app: trip-service
+  ports:
+    - port: 8083
+      targetPort: 8083
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: uber
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      containers:
+        - name: payment-service
+          image: uber/payment-service:latest
+          ports:
+            - containerPort: 8084
+          env:
+            - name: DB_HOST
+              value: postgres-service
+            - name: REDIS_HOST
+              value: redis-service
+            - name: KAFKA_SERVERS
+              value: kafka-service:9092
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: uber
+spec:
+  selector:
+    app: payment-service
+  ports:
+    - port: 8084
+      targetPort: 8084
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: uber
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+        - name: notification-service
+          image: uber/notification-service:latest
+          ports:
+            - containerPort: 8085
+          env:
+            - name: REDIS_HOST
+              value: redis-service
+            - name: KAFKA_SERVERS
+              value: kafka-service:9092
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: uber
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - port: 8085
+      targetPort: 8085
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eta-service
+  namespace: uber
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: eta-service
+  template:
+    metadata:
+      labels:
+        app: eta-service
+    spec:
+      containers:
+        - name: eta-service
+          image: uber/eta-service:latest
+          ports:
+            - containerPort: 8088
+          env:
+            - name: REDIS_HOST
+              value: redis-service
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: eta-service
+  namespace: uber
+spec:
+  selector:
+    app: eta-service
+  ports:
+    - port: 8088
+      targetPort: 8088
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: location-service-hpa
+  namespace: uber
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: location-service
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: matching-service-hpa
+  namespace: uber
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: matching-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: uber-secrets
+  namespace: uber
+type: Opaque
+stringData:
+  jwt-secret: uber-super-secret-key-minimum-256-bits-for-hs256-algorithm
+  db-password: postgres
+  stripe-api-key: sk_test_placeholder
+  fcm-server-key: fcm_key_placeholder
+  twilio-auth-token: token_placeholder

@@ -1,0 +1,6 @@
+com/uber/rider/entity/Rider$RiderBuilder.class
+com/uber/rider/service/RiderService.class
+com/uber/rider/entity/Rider.class
+com/uber/rider/controller/RiderController.class
+com/uber/rider/RiderServiceApplication.class
+com/uber/rider/repository/RiderRepository.class
